@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.animelog.animelogserver.mapper.AnimeMapper">
+
+    <insert id="insert" parameterType="com.animelog.animelogserver.entity.Anime" useGeneratedKeys="true" keyProperty="id">
+        insert into anime (
+            name, original_name, cover_url, total_episodes, type, source_type,
+            release_year, season, synopsis, source_provider, source_subject_id, created_by
+        ) values (
+            #{name}, #{originalName}, #{coverUrl}, #{totalEpisodes}, #{type}, #{sourceType},
+            #{releaseYear}, #{season}, #{synopsis}, #{sourceProvider}, #{sourceSubjectId}, #{createdBy}
+        )
+    </insert>
+
+    <select id="selectById" resultType="com.animelog.animelogserver.entity.Anime">
+        select * from anime where id = #{id}
+    </select>
+
+    <select id="selectBySource" resultType="com.animelog.animelogserver.entity.Anime">
+        select *
+        from anime
+        where source_provider = #{sourceProvider}
+          and source_subject_id = #{sourceSubjectId}
+        limit 1
+    </select>
+
+    <select id="selectByNameAndReleaseYear" resultType="com.animelog.animelogserver.entity.Anime">
+        select *
+        from anime
+        where name = #{name}
+        <choose>
+            <when test="releaseYear != null">
+                and release_year = #{releaseYear}
+            </when>
+            <otherwise>
+                and release_year is null
+            </otherwise>
+        </choose>
+        order by id desc
+        limit 1
+    </select>
+
+    <select id="selectPage" resultType="com.animelog.animelogserver.entity.Anime">
+        select *
+        from anime
+        <where>
+            <if test="name != null and name != ''">
+                and name like concat('%', #{name}, '%')
+            </if>
+            <if test="type != null and type != ''">
+                and type = #{type}
+            </if>
+        </where>
+        order by id desc
+    </select>
+
+    <select id="searchByKeyword" resultType="com.animelog.animelogserver.entity.Anime">
+        select *
+        from anime
+        where name like concat('%', #{keyword}, '%')
+           or original_name like concat('%', #{keyword}, '%')
+        order by id desc
+        limit 20
+    </select>
+
+    <update id="updateSyncFields" parameterType="com.animelog.animelogserver.entity.Anime">
+        update anime
+        set original_name = case
+                                when #{originalName} is not null and #{originalName} != '' then #{originalName}
+                                else original_name
+                            end,
+            cover_url = case
+                            when #{coverUrl} is not null and #{coverUrl} != '' then #{coverUrl}
+                            else cover_url
+                        end,
+            total_episodes = case
+                                 when #{totalEpisodes} is not null and #{totalEpisodes} > 0 then #{totalEpisodes}
+                                 else total_episodes
+                             end,
+            type = case
+                       when #{type} is not null and #{type} != '' then #{type}
+                       else type
+                   end,
+            source_type = case
+                              when #{sourceType} is not null and #{sourceType} != '' then #{sourceType}
+                              else source_type
+                          end,
+            source_provider = case
+                                  when #{sourceProvider} is not null and #{sourceProvider} != '' then #{sourceProvider}
+                                  else source_provider
+                              end,
+            source_subject_id = case
+                                    when #{sourceSubjectId} is not null then #{sourceSubjectId}
+                                    else source_subject_id
+                                end,
+            release_year = case
+                               when #{releaseYear} is not null then #{releaseYear}
+                               else release_year
+                           end,
+            season = case
+                         when #{season} is not null and #{season} != '' then #{season}
+                         else season
+                     end,
+            synopsis = case
+                           when #{synopsis} is not null and #{synopsis} != '' then #{synopsis}
+                           else synopsis
+                       end
+        where id = #{id}
+    </update>
+
+</mapper>

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.animelog.animelogserver.mapper.EpisodeLogMapper">
+
+    <insert id="insert" parameterType="com.animelog.animelogserver.entity.EpisodeLog" useGeneratedKeys="true" keyProperty="id">
+        insert into episode_log (
+            user_id, anime_id, user_anime_id, episode_no, episode_title,
+            content, mood_tag, score, is_highlight, watched_at
+        ) values (
+            #{userId}, #{animeId}, #{userAnimeId}, #{episodeNo}, #{episodeTitle},
+            #{content}, #{moodTag}, #{score}, #{isHighlight}, #{watchedAt}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.animelog.animelogserver.entity.EpisodeLog">
+        update episode_log
+        set anime_id = #{animeId},
+            user_anime_id = #{userAnimeId},
+            episode_no = #{episodeNo},
+            episode_title = #{episodeTitle},
+            content = #{content},
+            mood_tag = #{moodTag},
+            score = #{score},
+            is_highlight = #{isHighlight},
+            watched_at = #{watchedAt}
+        where id = #{id} and user_id = #{userId}
+    </update>
+
+    <delete id="deleteById">
+        delete from episode_log where id = #{id} and user_id = #{userId}
+    </delete>
+
+    <select id="selectById" resultType="com.animelog.animelogserver.entity.EpisodeLog">
+        select * from episode_log where id = #{id}
+    </select>
+
+    <select id="selectByUniqueKey" resultType="com.animelog.animelogserver.entity.EpisodeLog">
+        select * from episode_log
+        where user_id = #{userId} and anime_id = #{animeId} and episode_no = #{episodeNo}
+        limit 1
+    </select>
+
+    <select id="selectByAnimeId" resultType="com.animelog.animelogserver.vo.EpisodeLogVO">
+        select el.id,
+               el.anime_id,
+               el.user_anime_id,
+               el.episode_no,
+               el.episode_title,
+               el.content,
+               el.mood_tag,
+               el.score,
+               el.is_highlight,
+               el.watched_at,
+               el.created_at,
+               a.name as anime_name,
+               a.cover_url
+        from episode_log el
+        left join anime a on el.anime_id = a.id
+        where el.user_id = #{userId} and el.anime_id = #{animeId}
+        order by el.episode_no asc, el.created_at desc
+    </select>
+
+    <select id="selectDetail" resultType="com.animelog.animelogserver.vo.EpisodeLogVO">
+        select el.id,
+               el.anime_id,
+               el.user_anime_id,
+               el.episode_no,
+               el.episode_title,
+               el.content,
+               el.mood_tag,
+               el.score,
+               el.is_highlight,
+               el.watched_at,
+               el.created_at,
+               a.name as anime_name,
+               a.cover_url
+        from episode_log el
+        left join anime a on el.anime_id = a.id
+        where el.id = #{id} and el.user_id = #{userId}
+    </select>
+
+    <select id="selectTimeline" resultType="com.animelog.animelogserver.vo.EpisodeLogVO">
+        select el.id,
+               el.anime_id,
+               el.user_anime_id,
+               el.episode_no,
+               el.episode_title,
+               el.content,
+               el.mood_tag,
+               el.score,
+               el.is_highlight,
+               el.watched_at,
+               el.created_at,
+               a.name as anime_name,
+               a.cover_url
+        from episode_log el
+        left join anime a on el.anime_id = a.id
+        where el.user_id = #{userId}
+        order by el.watched_at desc, el.created_at desc
+    </select>
+
+    <select id="selectHighlightList" resultType="com.animelog.animelogserver.vo.EpisodeLogVO">
+        select el.id,
+               el.anime_id,
+               el.user_anime_id,
+               el.episode_no,
+               el.episode_title,
+               el.content,
+               el.mood_tag,
+               el.score,
+               el.is_highlight,
+               el.watched_at,
+               el.created_at,
+               a.name as anime_name,
+               a.cover_url
+        from episode_log el
+        left join anime a on el.anime_id = a.id
+        where el.user_id = #{userId}
+          and el.is_highlight = 1
+        order by el.watched_at desc, el.created_at desc
+    </select>
+
+</mapper>

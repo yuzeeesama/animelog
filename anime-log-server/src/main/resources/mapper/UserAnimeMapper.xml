@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.animelog.animelogserver.mapper.UserAnimeMapper">
+
+    <insert id="insert" parameterType="com.animelog.animelogserver.entity.UserAnime" useGeneratedKeys="true" keyProperty="id">
+        insert into user_anime (
+            user_id, anime_id, watch_status, current_episode, score, is_favorite,
+            start_date, finish_date, last_watch_time, remark
+        ) values (
+            #{userId}, #{animeId}, #{watchStatus}, #{currentEpisode}, #{score}, #{isFavorite},
+            #{startDate}, #{finishDate}, #{lastWatchTime}, #{remark}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.animelog.animelogserver.entity.UserAnime">
+        update user_anime
+        set anime_id = #{animeId},
+            watch_status = #{watchStatus},
+            current_episode = #{currentEpisode},
+            score = #{score},
+            is_favorite = #{isFavorite},
+            start_date = #{startDate},
+            finish_date = #{finishDate},
+            last_watch_time = #{lastWatchTime},
+            remark = #{remark}
+        where id = #{id} and user_id = #{userId}
+    </update>
+
+    <update id="updateProgress">
+        update user_anime
+        set current_episode = #{currentEpisode},
+            last_watch_time = now()
+        where id = #{id} and user_id = #{userId}
+    </update>
+
+    <delete id="deleteById">
+        delete from user_anime where id = #{id} and user_id = #{userId}
+    </delete>
+
+    <select id="selectById" resultType="com.animelog.animelogserver.entity.UserAnime">
+        select * from user_anime where id = #{id}
+    </select>
+
+    <select id="selectByUserIdAndAnimeId" resultType="com.animelog.animelogserver.entity.UserAnime">
+        select * from user_anime where user_id = #{userId} and anime_id = #{animeId} limit 1
+    </select>
+
+    <select id="selectDetail" resultType="com.animelog.animelogserver.vo.UserAnimeVO">
+        select ua.id,
+               ua.anime_id,
+               a.name as anime_name,
+               a.cover_url,
+               a.total_episodes,
+               a.type,
+               ua.watch_status,
+               ua.current_episode,
+               ua.score,
+               ua.is_favorite,
+               ua.start_date,
+               ua.finish_date,
+               ua.last_watch_time,
+               ua.remark
+        from user_anime ua
+        left join anime a on ua.anime_id = a.id
+        where ua.id = #{id} and ua.user_id = #{userId}
+    </select>
+
+    <select id="selectPage" resultType="com.animelog.animelogserver.vo.UserAnimeVO">
+        select ua.id,
+               ua.anime_id,
+               a.name as anime_name,
+               a.cover_url,
+               a.total_episodes,
+               a.type,
+               ua.watch_status,
+               ua.current_episode,
+               ua.score,
+               ua.is_favorite,
+               ua.start_date,
+               ua.finish_date,
+               ua.last_watch_time,
+               ua.remark
+        from user_anime ua
+        left join anime a on ua.anime_id = a.id
+        <where>
+            ua.user_id = #{userId}
+            <if test="watchStatus != null">
+                and ua.watch_status = #{watchStatus}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and a.name like concat('%', #{keyword}, '%')
+            </if>
+        </where>
+        order by ua.updated_at desc, ua.id desc
+    </select>
+
+    <select id="selectStatistics" resultType="com.animelog.animelogserver.vo.UserAnimeStatisticsVO">
+        select sum(case when watch_status = 0 then 1 else 0 end) as want_watch_count,
+               sum(case when watch_status = 1 then 1 else 0 end) as watching_count,
+               sum(case when watch_status = 2 then 1 else 0 end) as watched_count,
+               sum(case when watch_status = 3 then 1 else 0 end) as shelved_count,
+               sum(case when watch_status = 4 then 1 else 0 end) as dropped_count,
+               coalesce(sum(current_episode), 0) as total_episodes_watched
+        from user_anime
+        where user_id = #{userId}
+    </select>
+
+</mapper>

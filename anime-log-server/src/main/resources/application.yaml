@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: anime-log-server
+  profiles:
+    active: dev
+  jackson:
+    default-property-inclusion: non_null
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+  datasource:
+    driver-class-name: ${animelog.datasource.driver-class-name}
+    url: jdbc:mysql://${animelog.datasource.host}:${animelog.datasource.port}/${animelog.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${animelog.datasource.username}
+    password: ${animelog.datasource.password}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.animelog.animelogserver.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+
+springdoc:
+  swagger-ui:
+    path: /doc.html
+  api-docs:
+    path: /v3/api-docs
+
+animelog:
+  jwt:
+    secret: anime-log-secret-key-anime-log-secret-key
+    expire-hours: 72
+    issuer: anime-log-server
+  bangumi-api:
+    base-url: https://api.bgm.tv
+    user-agent: yuze/anime-log-server (https://github.com/yuze/myweb)
+  bangumi-data:
+    url: https://unpkg.com/bangumi-data@0.3/dist/data.json
+    local-resource: bangumi/data.json
+    cache-minutes: 360
+    sync-limit: 20
