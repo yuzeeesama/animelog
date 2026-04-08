@@ -1,4 +1,6 @@
 # AnimeLog
+<img width="256" height="256" alt="img" src="https://github.com/user-attachments/assets/f9ed7a09-1d9a-485e-8dcc-30274ebe22a7" />
+
 
 一个面向动画爱好者的追番日志应用，把「番剧管理」「单集记录」和「外部番剧搜索导入」集中在同一套前后端分离项目里。
 
