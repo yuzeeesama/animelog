@@ -1,12 +1,15 @@
 package com.animelog.animelogserver.service.impl;
 
 import com.animelog.animelogserver.config.BangumiApiProperties;
+import com.animelog.animelogserver.entity.Anime;
+import com.animelog.animelogserver.mapper.AnimeMapper;
 import com.animelog.animelogserver.service.BangumiApiService;
 import com.animelog.animelogserver.vo.AnimeVO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -17,10 +20,14 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -30,15 +37,26 @@ public class BangumiApiServiceImpl implements BangumiApiService {
 
     private final ObjectMapper objectMapper;
     private final BangumiApiProperties bangumiApiProperties;
+    private final AnimeMapper animeMapper;
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
+    private final Map<String, CacheEntry<List<AnimeVO>>> searchCache = new ConcurrentHashMap<>();
 
     @Override
     public List<AnimeVO> search(String keyword) {
+        String cacheKey = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        CacheEntry<List<AnimeVO>> cached = searchCache.get(cacheKey);
+        if (cached != null && !cached.isExpired(bangumiApiProperties.getSearchCacheMinutes())) {
+            return copyList(cached.value());
+        }
+
         JsonNode body = post("/v0/search/subjects", """
                 {
                   "keyword": %s,
                   "sort": "rank"
                 }
-                """.formatted(objectMapper.valueToTree(keyword).toString()));
+                """.formatted(objectMapper.valueToTree(keyword).toString()), bangumiApiProperties.getSearchTimeoutSeconds());
 
         List<AnimeVO> results = new ArrayList<>();
         for (JsonNode item : readArray(body, "data", "list")) {
@@ -47,21 +65,37 @@ public class BangumiApiServiceImpl implements BangumiApiService {
             }
             results.add(toAnimeVO(item, true));
         }
+        searchCache.put(cacheKey, new CacheEntry<>(copyList(results), Instant.now()));
         return results;
     }
 
     @Override
     public AnimeVO getDetail(Long subjectId) {
-        JsonNode body = get("/v0/subjects/" + subjectId);
+        JsonNode body = get("/v0/subjects/" + subjectId, bangumiApiProperties.getDetailTimeoutSeconds());
         if (readInt(body, "type") != null && readInt(body, "type") != SUBJECT_TYPE_ANIME) {
             throw new IllegalStateException("Bangumi 返回的条目不是动画 subjectId=" + subjectId);
         }
         return toAnimeVO(body, true);
     }
 
-    private JsonNode post(String path, String payload) {
+    @Override
+    public List<AnimeVO> searchAndCache(String keyword) {
+        List<AnimeVO> remoteResults = search(keyword);
+        List<AnimeVO> cachedResults = new ArrayList<>();
+        for (AnimeVO item : remoteResults) {
+            Anime anime = upsertBangumiAnime(item);
+            AnimeVO vo = copyAnime(item);
+            vo.setId(anime.getId());
+            vo.setExternal(true);
+            vo.setSourceSyncedAt(anime.getSourceSyncedAt());
+            cachedResults.add(vo);
+        }
+        return cachedResults;
+    }
+
+    private JsonNode post(String path, String payload, Long timeoutSeconds) {
         HttpRequest request = HttpRequest.newBuilder(buildUri(path))
-                .timeout(Duration.ofSeconds(20))
+                .timeout(Duration.ofSeconds(timeoutSeconds))
                 .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
                 .header("User-Agent", bangumiApiProperties.getUserAgent())
@@ -70,9 +104,9 @@ public class BangumiApiServiceImpl implements BangumiApiService {
         return send(request);
     }
 
-    private JsonNode get(String path) {
+    private JsonNode get(String path, Long timeoutSeconds) {
         HttpRequest request = HttpRequest.newBuilder(buildUri(path))
-                .timeout(Duration.ofSeconds(20))
+                .timeout(Duration.ofSeconds(timeoutSeconds))
                 .header("Accept", "application/json")
                 .header("User-Agent", bangumiApiProperties.getUserAgent())
                 .GET()
@@ -81,10 +115,6 @@ public class BangumiApiServiceImpl implements BangumiApiService {
     }
 
     private JsonNode send(HttpRequest request) {
-        HttpClient httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
-
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
@@ -255,5 +285,56 @@ public class BangumiApiServiceImpl implements BangumiApiService {
 
     private Integer defaultIfNull(Integer value, Integer defaultValue) {
         return value == null ? defaultValue : value;
+    }
+
+    private List<AnimeVO> copyList(List<AnimeVO> source) {
+        return source.stream().map(this::copyAnime).toList();
+    }
+
+    private AnimeVO copyAnime(AnimeVO source) {
+        AnimeVO target = new AnimeVO();
+        BeanUtils.copyProperties(source, target);
+        return target;
+    }
+
+    private Anime upsertBangumiAnime(AnimeVO item) {
+        Anime anime = new Anime();
+        anime.setName(item.getName());
+        anime.setOriginalName(item.getOriginalName());
+        anime.setCoverUrl(item.getCoverUrl());
+        anime.setTotalEpisodes(item.getTotalEpisodes() == null ? 0 : item.getTotalEpisodes());
+        anime.setType(item.getType());
+        anime.setSourceType(item.getSourceType());
+        anime.setReleaseYear(item.getReleaseYear());
+        anime.setSeason(item.getSeason());
+        anime.setSynopsis(item.getSynopsis());
+        anime.setSourceProvider("bangumi");
+        anime.setSourceSubjectId(item.getSourceSubjectId());
+        anime.setSourceSyncedAt(LocalDateTime.now());
+
+        Anime existing = animeMapper.selectBySource(anime.getSourceProvider(), anime.getSourceSubjectId());
+        if (existing != null) {
+            anime.setId(existing.getId());
+            animeMapper.updateSyncFields(anime);
+            Anime updated = animeMapper.selectById(existing.getId());
+            return updated == null ? existing : updated;
+        }
+
+        Anime byName = animeMapper.selectByNameAndReleaseYear(anime.getName(), anime.getReleaseYear());
+        if (byName != null) {
+            anime.setId(byName.getId());
+            animeMapper.updateSyncFields(anime);
+            Anime updated = animeMapper.selectById(byName.getId());
+            return updated == null ? byName : updated;
+        }
+
+        animeMapper.insert(anime);
+        return anime;
+    }
+
+    private record CacheEntry<T>(T value, Instant createdAt) {
+        private boolean isExpired(Long cacheMinutes) {
+            return cacheMinutes == null || cacheMinutes <= 0 || createdAt.plus(Duration.ofMinutes(cacheMinutes)).isBefore(Instant.now());
+        }
     }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { getTimeline } from '@/api/episodeLog'
+import { getHighlightLogs, getTimeline } from '@/api/episodeLog'
 import { getUserAnimeList, getUserAnimeStatistics } from '@/api/userAnime'
 import AnimeCard from '@/components/AnimeCard.vue'
 import LogTimelineItem from '@/components/LogTimelineItem.vue'
@@ -14,6 +14,7 @@ const authStore = useAuthStore()
 const statistics = ref<UserAnimeStatistics | null>(null)
 const watchingList = ref<UserAnime[]>([])
 const timeline = ref<EpisodeLog[]>([])
+const highlights = ref<EpisodeLog[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 
@@ -81,15 +82,17 @@ async function load() {
   errorMessage.value = ''
 
   try {
-    const [stats, library, logs] = await Promise.all([
+    const [stats, library, logs, highlightPage] = await Promise.all([
       getUserAnimeStatistics(),
       getUserAnimeList({ watchStatus: 1, pageNum: 1, pageSize: 4 }),
       getTimeline({ pageNum: 1, pageSize: 5 }),
+      getHighlightLogs({ pageNum: 1, pageSize: 3 }),
     ])
 
     statistics.value = stats
     watchingList.value = library.list
     timeline.value = logs.list
+    highlights.value = highlightPage.list
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '加载工作台失败。'
   } finally {
@@ -107,17 +110,17 @@ onMounted(() => {
     <section class="hero-panel">
       <div class="hero-copy">
         <span class="hero-badge">Worktable</span>
-        <h1>把进度、心情和每一集的余韵，写进一条持续生长的追番时间线。</h1>
+        <h1>把追番进度、最近动态和最喜欢的片段，都集中在这个番剧工作台里。</h1>
         <p>
           {{
             authStore.userInfo?.nickname
-              ? `${authStore.userInfo.nickname}，继续上次的观看记录吧。`
-              : '继续整理你的番剧列表和单集感想。'
+              ? `${authStore.userInfo.nickname}，从这里继续追番、补进度，或者回看最近的记录吧。`
+              : '从这里继续整理你的番剧列表、进度和单集感想。'
           }}
         </p>
         <div class="hero-actions">
           <RouterLink class="primary-button" to="/library">管理我的追番</RouterLink>
-          <RouterLink class="ghost-button" to="/profile">编辑个人档案</RouterLink>
+          <RouterLink class="ghost-button" to="/anime-search">去搜索新番</RouterLink>
         </div>
         <div class="hero-metrics" aria-label="首页摘要">
           <div class="hero-metric-card">
@@ -169,7 +172,7 @@ onMounted(() => {
         <SectionTitle
           eyebrow="Now Watching"
           title="继续中的番剧"
-          description="把正在看的内容留在首页，一眼就能回到当前进度。"
+          description="把正在看的内容留在首页，一眼就能回到当前进度和详情页。"
         />
 
         <div v-if="loading" class="skeleton-list" aria-hidden="true">
@@ -187,7 +190,7 @@ onMounted(() => {
         <SectionTitle
           eyebrow="Timeline"
           title="最近日志"
-          description="每一条日志都是追番记忆的书签。"
+          description="查看最近发生了什么，快速接上你的追番节奏。"
         />
 
         <div v-if="loading" class="skeleton-list" aria-hidden="true">
@@ -199,6 +202,24 @@ onMounted(() => {
         <div v-else class="timeline-list">
           <LogTimelineItem v-for="item in timeline" :key="item.id" :item="item" />
         </div>
+      </div>
+    </section>
+
+    <section class="content-panel">
+      <SectionTitle
+        eyebrow="Highlights"
+        title="神回记录"
+        description="把最值得反复回看的片段也放进工作台，所有番剧内容都集中在这里。"
+      />
+
+      <div v-if="loading" class="skeleton-list" aria-hidden="true">
+        <div v-for="index in 3" :key="index" class="skeleton-card skeleton-card--compact" />
+      </div>
+      <div v-else-if="!highlights.length" class="empty-state">
+        还没有标记“神回”的日志，等你在番剧详情页为喜欢的集数点亮它。
+      </div>
+      <div v-else class="timeline-list">
+        <LogTimelineItem v-for="item in highlights" :key="item.id" :item="item" />
       </div>
     </section>
   </div>

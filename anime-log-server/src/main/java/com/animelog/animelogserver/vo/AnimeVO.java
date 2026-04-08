@@ -34,6 +34,8 @@ public class AnimeVO {
     private String sourceProvider;
     @Schema(description = "外部条目ID")
     private Long sourceSubjectId;
+    @Schema(description = "外部数据同步时间")
+    private LocalDateTime sourceSyncedAt;
     @Schema(description = "是否外部条目")
     private Boolean external;
     @Schema(description = "回退数据源标记")

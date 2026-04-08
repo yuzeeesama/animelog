@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { RouterLink } from 'vue-router'
 import { followExternalAnime, searchAnime } from '@/api/anime'
 import { createUserAnime, getUserAnimeList } from '@/api/userAnime'
 import SectionTitle from '@/components/SectionTitle.vue'
 import type { Anime, UserAnime } from '@/types/models'
+import { useAnimeSearchStore } from '@/stores/animeSearch'
 
-const keyword = ref('')
+const searchStore = useAnimeSearchStore()
+searchStore.hydrate()
+
+const { keyword, results, message, isError, hasSearched, globalSearchToken } = storeToRefs(searchStore)
+
 const loading = ref(false)
 const followLoadingId = ref<number | null>(null)
-const results = ref<Anime[]>([])
-const followedAnimeIds = ref<Set<number>>(new Set())
-const message = ref('')
-const isError = ref(false)
+const loadingFollowed = ref(false)
+const handledGlobalToken = ref(0)
 
 const hasKeyword = computed(() => Boolean(keyword.value.trim()))
 const fallbackNotice = computed(() =>
@@ -22,41 +26,53 @@ const fallbackNotice = computed(() =>
 )
 
 function setMessage(next: string, error = false) {
-  message.value = next
-  isError.value = error
+  searchStore.setSearchState({
+    message: next,
+    isError: error,
+  })
 }
 
 async function loadFollowedAnimeMap(targets: Anime[]) {
+  const candidates = targets.filter((item) => item.id != null)
+  if (candidates.length === 0) {
+    searchStore.setFollowedAnimeIds([])
+    return
+  }
+
+  loadingFollowed.value = true
   const matchedIds = new Set<number>()
   let pageNum = 1
   let totalPages = 1
   const byId = new Map<number, Anime>(
-    targets.filter((item) => item.id != null).map((item) => [item.id as number, item]),
+    candidates.map((item) => [item.id as number, item]),
   )
 
-  while (pageNum <= totalPages) {
-    const page = await getUserAnimeList({
-      pageNum,
-      pageSize: 50,
-    })
+  try {
+    while (pageNum <= totalPages) {
+      const page = await getUserAnimeList({
+        pageNum,
+        pageSize: 100,
+      })
 
-    totalPages = Math.max(1, Math.ceil(page.total / 50))
-    page.list.forEach((item: UserAnime) => {
-      if (byId.has(item.animeId)) {
-        matchedIds.add(item.animeId)
-      }
-    })
-    pageNum += 1
+      totalPages = Math.max(1, Math.ceil(page.total / 100))
+      page.list.forEach((item: UserAnime) => {
+        if (byId.has(item.animeId)) {
+          matchedIds.add(item.animeId)
+        }
+      })
+      pageNum += 1
+    }
+
+    searchStore.setFollowedAnimeIds(Array.from(matchedIds))
+  } finally {
+    loadingFollowed.value = false
   }
-
-  followedAnimeIds.value = matchedIds
 }
 
 async function runSearch() {
   const nextKeyword = keyword.value.trim()
   if (!nextKeyword) {
-    results.value = []
-    followedAnimeIds.value = new Set()
+    searchStore.clearSearchState()
     setMessage('请输入番剧名称后再搜索。', true)
     return
   }
@@ -65,8 +81,13 @@ async function runSearch() {
 
   try {
     const animeList = await searchAnime(nextKeyword)
-    results.value = animeList
-    await loadFollowedAnimeMap(animeList)
+    searchStore.setSearchState({
+      keyword: nextKeyword,
+      results: animeList,
+      followedAnimeIds: [],
+      hasSearched: true,
+    })
+    void loadFollowedAnimeMap(animeList)
 
     if (animeList.length === 0) {
       setMessage('暂时没有找到匹配的番剧，可以换个别名或日文名试试。', true)
@@ -74,6 +95,12 @@ async function runSearch() {
       setMessage(`找到 ${animeList.length} 部相关番剧，可以先看信息，再决定要不要追。`)
     }
   } catch (error) {
+    searchStore.setSearchState({
+      keyword: nextKeyword,
+      results: [],
+      followedAnimeIds: [],
+      hasSearched: true,
+    })
     setMessage(error instanceof Error ? error.message : '搜索番剧失败。', true)
   } finally {
     loading.value = false
@@ -95,6 +122,7 @@ async function followAnime(anime: Anime) {
         remark: '',
       })
       anime.id = localAnimeId
+      searchStore.setSearchState({ results: results.value })
     } else if (anime.id) {
       await createUserAnime({
         animeId: anime.id,
@@ -106,11 +134,9 @@ async function followAnime(anime: Anime) {
     } else {
       throw new Error('当前番剧缺少可追番的标识')
     }
-    const next = new Set(followedAnimeIds.value)
     if (anime.id) {
-      next.add(anime.id)
+      searchStore.markAnimeFollowed(anime.id)
     }
-    followedAnimeIds.value = next
     setMessage(`《${anime.name}》已经加入你的追番列表。`)
   } catch (error) {
     setMessage(error instanceof Error ? error.message : '加入追番失败。', true)
@@ -120,7 +146,7 @@ async function followAnime(anime: Anime) {
 }
 
 function isFollowed(anime: Anime) {
-  return anime.id != null && followedAnimeIds.value.has(anime.id)
+  return anime.id != null && searchStore.followedAnimeIds.includes(anime.id)
 }
 
 function detailRoute(anime: Anime) {
@@ -129,6 +155,17 @@ function detailRoute(anime: Anime) {
   }
   return anime.id ? `/anime/${anime.id}` : '/anime-search'
 }
+
+watch(
+  globalSearchToken,
+  (token) => {
+    if (token <= handledGlobalToken.value) return
+    handledGlobalToken.value = token
+    searchStore.consumePendingGlobalSearch()
+    void runSearch()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -164,12 +201,13 @@ function detailRoute(anime: Anime) {
         {{ message }}
       </p>
       <p v-if="fallbackNotice" class="status-note">{{ fallbackNotice }}</p>
+      <p v-if="results.length && loadingFollowed" class="status-note">正在补充你的追番状态标记…</p>
 
       <div v-if="loading" class="skeleton-list" aria-hidden="true">
         <div v-for="index in 4" :key="index" class="skeleton-card skeleton-card--compact" />
       </div>
 
-      <div v-else-if="hasKeyword && !results.length" class="empty-state">
+      <div v-else-if="hasSearched && hasKeyword && !results.length" class="empty-state">
         没有找到相关番剧，试试别名、原名，或者换更短一点的关键词。
       </div>
 

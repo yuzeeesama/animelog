@@ -44,6 +44,7 @@ CREATE TABLE anime (
     synopsis TEXT COMMENT '简介',
     source_provider VARCHAR(50) DEFAULT NULL COMMENT '外部来源提供方: bangumi',
     source_subject_id BIGINT DEFAULT NULL COMMENT '外部来源条目ID',
+    source_synced_at DATETIME DEFAULT NULL COMMENT '外部来源同步时间',
     created_by BIGINT DEFAULT NULL COMMENT '创建人ID',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

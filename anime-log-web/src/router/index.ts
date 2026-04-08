@@ -8,6 +8,11 @@ import LoginView from '@/views/LoginView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import { getStoredToken } from '@/stores/auth'
+import { useAnimeSearchStore } from '@/stores/animeSearch'
+
+function isAnimeDetailRouteName(name: unknown) {
+  return name === 'anime-detail' || name === 'anime-external-detail'
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -81,8 +86,18 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach((to, from) => {
   const hasToken = Boolean(getStoredToken())
+  const searchStore = useAnimeSearchStore()
+
+  if (to.name === 'anime-search') {
+    const shouldKeepResults = searchStore.consumePreserveDetailReturn() && isAnimeDetailRouteName(from.name)
+    const hasPendingGlobalSearch = searchStore.consumePendingGlobalSearch()
+
+    if (!shouldKeepResults && !hasPendingGlobalSearch) {
+      searchStore.clearSearchState()
+    }
+  }
 
   if (to.meta.requiresAuth && !hasToken) {
     return '/login'
@@ -93,6 +108,12 @@ router.beforeEach((to) => {
   }
 
   return true
+})
+
+router.afterEach((to, from) => {
+  if (from.name === 'anime-search' && isAnimeDetailRouteName(to.name)) {
+    useAnimeSearchStore().markPreserveDetailReturn()
+  }
 })
 
 export default router

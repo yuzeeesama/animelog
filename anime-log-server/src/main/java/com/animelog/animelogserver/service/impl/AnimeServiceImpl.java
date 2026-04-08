@@ -1,6 +1,7 @@
 package com.animelog.animelogserver.service.impl;
 
 import com.animelog.animelogserver.common.PageResult;
+import com.animelog.animelogserver.config.BangumiApiProperties;
 import com.animelog.animelogserver.dto.AnimeQueryDTO;
 import com.animelog.animelogserver.dto.AnimeSaveDTO;
 import com.animelog.animelogserver.dto.ExternalAnimeFollowDTO;
@@ -23,7 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +39,8 @@ public class AnimeServiceImpl implements AnimeService {
     private final UserAnimeMapper userAnimeMapper;
     private final BangumiApiService bangumiApiService;
     private final BangumiDataSyncService bangumiDataSyncService;
+    private final BangumiApiProperties bangumiApiProperties;
+    private final Set<String> refreshingKeywords = ConcurrentHashMap.newKeySet();
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -67,8 +75,14 @@ public class AnimeServiceImpl implements AnimeService {
 
     @Override
     public List<AnimeVO> search(String keyword) {
+        List<Anime> cachedAnimeList = animeMapper.searchBangumiCache(keyword);
+        if (!cachedAnimeList.isEmpty()) {
+            triggerAsyncRefreshIfNeeded(keyword, cachedAnimeList);
+            return cachedAnimeList.stream().map(this::toVO).toList();
+        }
+
         try {
-            return bangumiApiService.search(keyword).stream()
+            return bangumiApiService.searchAndCache(keyword).stream()
                     .map(this::attachLocalLink)
                     .toList();
         } catch (Exception ex) {
@@ -142,7 +156,7 @@ public class AnimeServiceImpl implements AnimeService {
     private AnimeVO toVO(Anime anime) {
         AnimeVO vo = new AnimeVO();
         BeanUtils.copyProperties(anime, vo);
-        vo.setExternal(false);
+        vo.setExternal("bangumi".equalsIgnoreCase(anime.getSourceProvider()));
         return vo;
     }
 
@@ -193,6 +207,7 @@ public class AnimeServiceImpl implements AnimeService {
         anime.setSynopsis(detail.getSynopsis());
         anime.setSourceProvider(detail.getSourceProvider());
         anime.setSourceSubjectId(detail.getSourceSubjectId());
+        anime.setSourceSyncedAt(LocalDateTime.now());
 
         Anime bySource = animeMapper.selectBySource(anime.getSourceProvider(), anime.getSourceSubjectId());
         if (bySource != null) {
@@ -210,5 +225,38 @@ public class AnimeServiceImpl implements AnimeService {
 
         animeMapper.insert(anime);
         return anime;
+    }
+
+    private void triggerAsyncRefreshIfNeeded(String keyword, List<Anime> cachedAnimeList) {
+        if (!StringUtils.hasText(keyword) || !shouldRefresh(cachedAnimeList)) {
+            return;
+        }
+
+        String refreshKey = keyword.trim().toLowerCase(Locale.ROOT);
+        if (!refreshingKeywords.add(refreshKey)) {
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                bangumiApiService.searchAndCache(keyword);
+                log.info("Bangumi 搜索缓存后台刷新完成, keyword={}", keyword);
+            } catch (Exception ex) {
+                log.warn("Bangumi 搜索缓存后台刷新失败, keyword={}", keyword, ex);
+            } finally {
+                refreshingKeywords.remove(refreshKey);
+            }
+        });
+    }
+
+    private boolean shouldRefresh(List<Anime> cachedAnimeList) {
+        LocalDateTime threshold = LocalDateTime.now()
+                .minus(bangumiApiProperties.getRefreshCooldownMinutes(), ChronoUnit.MINUTES);
+        for (Anime anime : cachedAnimeList) {
+            if (anime.getSourceSyncedAt() == null || anime.getSourceSyncedAt().isBefore(threshold)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

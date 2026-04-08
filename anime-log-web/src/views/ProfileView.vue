@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { getHighlightLogs } from '@/api/episodeLog'
-import { getUserAnimeStatistics } from '@/api/userAnime'
 import { updateUserPassword, updateUserProfile } from '@/api/user'
-import LogTimelineItem from '@/components/LogTimelineItem.vue'
 import SectionTitle from '@/components/SectionTitle.vue'
 import { useAuthStore } from '@/stores/auth'
-import type { EpisodeLog, UserAnimeStatistics } from '@/types/models'
 import {
   firstValidationMessage,
   type ValidationErrors,
@@ -29,8 +25,6 @@ const passwordForm = reactive({
   confirmPassword: '',
 })
 
-const statistics = ref<UserAnimeStatistics | null>(null)
-const highlights = ref<EpisodeLog[]>([])
 const loading = ref(true)
 const message = ref('')
 const isError = ref(false)
@@ -56,14 +50,6 @@ async function hydratePage() {
       email: info?.email ?? '',
       bio: info?.bio ?? '',
     })
-
-    const [stats, highlightPage] = await Promise.all([
-      getUserAnimeStatistics(),
-      getHighlightLogs({ pageNum: 1, pageSize: 3 }),
-    ])
-
-    statistics.value = stats
-    highlights.value = highlightPage.list
   } catch (error) {
     setMessage(error instanceof Error ? error.message : '加载个人中心失败。', true)
   } finally {
@@ -147,7 +133,7 @@ onMounted(() => {
       <SectionTitle
         eyebrow="Profile"
         title="个人中心"
-        description="管理昵称、头像和简介，也能顺手看一眼自己的追番统计和高光回忆。"
+        description="在这里维护个人资料与账号安全设置，不处理番剧内容。"
       />
       <div class="profile-summary">
         <div class="profile-avatar">
@@ -176,32 +162,9 @@ onMounted(() => {
     </template>
 
     <template v-else>
-      <section class="stats-grid">
-        <article class="stat-card">
-          <span>在看</span>
-          <strong>{{ statistics?.watchingCount ?? 0 }}</strong>
-          <p>仍在持续更新中的作品数量</p>
-        </article>
-        <article class="stat-card">
-          <span>看完</span>
-          <strong>{{ statistics?.watchedCount ?? 0 }}</strong>
-          <p>已经正式写进档案的完结记录</p>
-        </article>
-        <article class="stat-card">
-          <span>想看</span>
-          <strong>{{ statistics?.wantWatchCount ?? 0 }}</strong>
-          <p>准备打开的新坑和待补目录</p>
-        </article>
-        <article class="stat-card">
-          <span>总记录集数</span>
-          <strong>{{ statistics?.totalEpisodesWatched ?? 0 }}</strong>
-          <p>所有追番过程中累计写下的观看进度</p>
-        </article>
-      </section>
-
       <section class="content-grid">
         <div class="content-panel">
-          <SectionTitle eyebrow="Edit Profile" title="修改资料" description="更新你的公开信息和个性签名。" />
+          <SectionTitle eyebrow="Edit Profile" title="修改资料" description="更新昵称、头像、邮箱和个人简介。" />
 
           <div class="form-stack">
             <label>
@@ -231,7 +194,7 @@ onMounted(() => {
         </div>
 
         <div class="content-panel">
-          <SectionTitle eyebrow="Security" title="修改密码" description="更新当前账号的登录密码。" />
+          <SectionTitle eyebrow="Security" title="账号安全" description="更新当前账号密码，保持登录信息安全。" />
 
           <div class="form-stack">
             <label>
@@ -253,14 +216,6 @@ onMounted(() => {
               {{ savingPassword ? '更新中...' : '更新密码' }}
             </button>
           </div>
-        </div>
-      </section>
-
-      <section class="content-panel">
-        <SectionTitle eyebrow="Highlights" title="神回记录" description="这里收起了你最想反复回看的片段。" />
-        <div v-if="!highlights.length" class="empty-state">还没有标记“神回”的日志，等你在详情页为喜欢的集数点亮它。</div>
-        <div v-else class="timeline-list">
-          <LogTimelineItem v-for="item in highlights" :key="item.id" :item="item" />
         </div>
       </section>
     </template>

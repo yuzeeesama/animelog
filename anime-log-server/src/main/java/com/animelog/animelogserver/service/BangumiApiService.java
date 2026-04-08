@@ -8,4 +8,6 @@ public interface BangumiApiService {
     List<AnimeVO> search(String keyword);
 
     AnimeVO getDetail(Long subjectId);
+
+    List<AnimeVO> searchAndCache(String keyword);
 }

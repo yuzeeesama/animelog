@@ -41,6 +41,10 @@ animelog:
   bangumi-api:
     base-url: https://api.bgm.tv
     user-agent: yuze/anime-log-server (https://github.com/yuze/myweb)
+    search-cache-minutes: 10
+    search-timeout-seconds: 6
+    detail-timeout-seconds: 10
+    refresh-cooldown-minutes: 30
   bangumi-data:
     url: https://unpkg.com/bangumi-data@0.3/dist/data.json
     local-resource: bangumi/data.json

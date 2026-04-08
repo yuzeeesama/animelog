@@ -18,6 +18,7 @@ public class Anime {
     private String synopsis;
     private String sourceProvider;
     private Long sourceSubjectId;
+    private LocalDateTime sourceSyncedAt;
     private Long createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

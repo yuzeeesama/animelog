@@ -5,10 +5,10 @@
     <insert id="insert" parameterType="com.animelog.animelogserver.entity.Anime" useGeneratedKeys="true" keyProperty="id">
         insert into anime (
             name, original_name, cover_url, total_episodes, type, source_type,
-            release_year, season, synopsis, source_provider, source_subject_id, created_by
+            release_year, season, synopsis, source_provider, source_subject_id, source_synced_at, created_by
         ) values (
             #{name}, #{originalName}, #{coverUrl}, #{totalEpisodes}, #{type}, #{sourceType},
-            #{releaseYear}, #{season}, #{synopsis}, #{sourceProvider}, #{sourceSubjectId}, #{createdBy}
+            #{releaseYear}, #{season}, #{synopsis}, #{sourceProvider}, #{sourceSubjectId}, #{sourceSyncedAt}, #{createdBy}
         )
     </insert>
 
@@ -38,6 +38,18 @@
         </choose>
         order by id desc
         limit 1
+    </select>
+
+    <select id="searchBangumiCache" resultType="com.animelog.animelogserver.entity.Anime">
+        select *
+        from anime
+        where source_provider = 'bangumi'
+          and (
+              name like concat('%', #{keyword}, '%')
+              or original_name like concat('%', #{keyword}, '%')
+          )
+        order by source_synced_at desc, id desc
+        limit 20
     </select>
 
     <select id="selectPage" resultType="com.animelog.animelogserver.entity.Anime">
@@ -93,6 +105,10 @@
                                     when #{sourceSubjectId} is not null then #{sourceSubjectId}
                                     else source_subject_id
                                 end,
+            source_synced_at = case
+                                   when #{sourceSyncedAt} is not null then #{sourceSyncedAt}
+                                   else source_synced_at
+                               end,
             release_year = case
                                when #{releaseYear} is not null then #{releaseYear}
                                else release_year

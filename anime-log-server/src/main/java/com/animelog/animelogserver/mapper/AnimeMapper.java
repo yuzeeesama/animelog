@@ -14,6 +14,8 @@ public interface AnimeMapper {
 
     Anime selectByNameAndReleaseYear(@Param("name") String name, @Param("releaseYear") Integer releaseYear);
 
+    List<Anime> searchBangumiCache(@Param("keyword") String keyword);
+
     List<Anime> selectPage(@Param("name") String name, @Param("type") String type);
 
     List<Anime> searchByKeyword(@Param("keyword") String keyword);

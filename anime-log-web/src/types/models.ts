@@ -84,6 +84,15 @@ export interface AuthSession {
   userInfo: UserInfo
 }
 
+export interface AnimeSearchSession {
+  keyword: string
+  results: Anime[]
+  message: string
+  isError: boolean
+  followedAnimeIds: number[]
+  hasSearched: boolean
+}
+
 export interface UserRegisterPayload {
   username: string
   password: string

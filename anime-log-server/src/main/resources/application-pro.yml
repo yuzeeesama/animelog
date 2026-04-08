@@ -4,5 +4,5 @@ animelog:
     host: localhost
     port: 3306
     database: anime_log_db
-    username: root
+    username: anime_log_db
     password: 123456
