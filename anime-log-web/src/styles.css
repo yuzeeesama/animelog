@@ -25,6 +25,11 @@
   --radius-xl: 24px;
   --radius-lg: 18px;
   --container: min(1180px, calc(100vw - 40px));
+  --mobile-shell: min(100vw - 24px, 680px);
+  --mobile-topbar-height: 72px;
+  --mobile-tabbar-height: 84px;
+  --mobile-safe-bottom: calc(var(--mobile-tabbar-height) + env(safe-area-inset-bottom, 0px) + 18px);
+  --touch-size: 44px;
 }
 
 * {
@@ -41,6 +46,7 @@ body {
   margin: 0;
   color: var(--text);
   background: #fff7fb;
+  overflow-x: hidden;
 }
 
 a {
@@ -79,6 +85,12 @@ select {
 img {
   display: block;
   max-width: 100%;
+}
+
+.mobile-topbar,
+.mobile-tabbar,
+.mobile-profile-actions {
+  display: none;
 }
 
 .app-shell {
@@ -128,6 +140,74 @@ img {
 
 .skip-link:focus-visible {
   transform: translateY(0);
+}
+
+.mobile-topbar {
+  align-items: center;
+  gap: 12px;
+  width: var(--mobile-shell);
+  min-height: var(--mobile-topbar-height);
+  margin: 0 auto;
+  padding: 12px 4px 8px;
+}
+
+.mobile-brand,
+.mobile-user-link,
+.mobile-page-heading {
+  min-width: 0;
+}
+
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.mobile-brand-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.mobile-brand-copy strong,
+.mobile-page-heading strong {
+  font-size: 1rem;
+}
+
+.mobile-brand-copy small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.mobile-page-heading {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+}
+
+.mobile-page-heading .section-eyebrow {
+  font-size: 0.68rem;
+}
+
+.mobile-icon-button {
+  min-width: var(--touch-size);
+  min-height: var(--touch-size);
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+}
+
+.mobile-user-link {
+  display: inline-flex;
+  margin-left: auto;
+}
+
+.mobile-user-link .avatar-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
 }
 
 .app-sidebar {
@@ -636,6 +716,15 @@ img {
   justify-content: space-between;
 }
 
+.anime-card-copy {
+  min-width: 0;
+}
+
+.anime-card-link {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
 .anime-card-head h3,
 .timeline-card-head h3 {
   margin: 8px 0 0;
@@ -700,6 +789,16 @@ img {
   font-size: 0.9rem;
 }
 
+.progress-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-summary p {
+  margin: 0;
+  color: var(--muted);
+}
+
 .timeline-item {
   display: grid;
   grid-template-columns: 18px 1fr;
@@ -720,6 +819,75 @@ img {
   border-radius: 18px;
   background: #fff;
   border: 1px solid var(--line);
+}
+
+.broadcast-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.broadcast-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #fff 0%, #fff5fa 100%);
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.broadcast-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-strong);
+}
+
+.broadcast-card-cover-link {
+  display: block;
+}
+
+.broadcast-card-cover,
+.broadcast-card-cover--placeholder {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 18px;
+  object-fit: cover;
+}
+
+.broadcast-card-cover--placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft-strong);
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.broadcast-card-body,
+.broadcast-card-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.broadcast-card-copy h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.broadcast-card-original {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.broadcast-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
 }
 
 .timeline-date {
@@ -965,6 +1133,20 @@ img {
   gap: 12px;
 }
 
+.library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.library-actions > * {
+  min-height: var(--touch-size);
+}
+
+.library-actions--compact {
+  padding-left: 32px;
+}
+
 .editor-section {
   display: grid;
   gap: 16px;
@@ -1042,6 +1224,10 @@ img {
   min-height: 110px;
 }
 
+.skeleton-card--broadcast {
+  min-height: 320px;
+}
+
 .toggle-line {
   display: flex !important;
   align-items: center;
@@ -1073,6 +1259,14 @@ img {
   margin-top: 12px;
 }
 
+.mobile-profile-actions {
+  width: 100%;
+}
+
+.mobile-profile-logout {
+  width: 100%;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -1101,8 +1295,6 @@ img {
 }
 
 @media (max-width: 1080px) {
-  .app-shell,
-  .auth-page,
   .content-grid,
   .content-grid--library,
   .content-grid--detail,
@@ -1111,12 +1303,13 @@ img {
   .split-hero,
   .stats-grid,
   .dashboard-band,
-  .hero-metrics {
+  .hero-metrics,
+  .broadcast-grid {
     grid-template-columns: 1fr;
   }
 
   .app-shell {
-    width: min(100vw - 24px, 100vw - 24px);
+    width: min(100vw - 24px, 1440px);
     gap: 18px;
   }
 
@@ -1144,33 +1337,266 @@ img {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: end;
   }
+
+  .auth-page {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .auth-poster {
+    min-height: 320px;
+  }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   :root {
-    --container: min(100vw - 24px, 100vw - 24px);
+    --container: var(--mobile-shell);
   }
 
   .app-shell {
-    width: min(100vw - 16px, 100vw - 16px);
-    padding-top: 12px;
+    display: block;
+    width: 100%;
+    min-height: 100dvh;
+    padding: 0 0 calc(env(safe-area-inset-bottom, 0px) + 8px);
   }
 
-  .sidebar-surface {
-    padding: 18px 16px;
+  .app-sidebar {
+    display: none;
+  }
+
+  .mobile-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    background: rgba(255, 247, 251, 0.86);
+    backdrop-filter: blur(14px);
+  }
+
+  .page-shell,
+  .auth-layout {
+    width: var(--mobile-shell);
+    margin: 0 auto;
+  }
+
+  .page-shell {
+    padding: 8px 0 var(--mobile-safe-bottom);
+  }
+
+  .auth-layout {
+    padding: 12px 0 36px;
+  }
+
+  .mobile-tabbar {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    z-index: 45;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    width: min(calc(100vw - 16px), 720px);
+    padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    transform: translateX(-50%);
+    border-top: 1px solid rgba(230, 182, 207, 0.72);
+    border-radius: 24px 24px 0 0;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 -8px 24px rgba(167, 72, 116, 0.08);
+  }
+
+  .mobile-tab {
+    display: grid;
+    place-items: center;
+    min-height: var(--touch-size);
+    padding: 8px 10px;
+    border-radius: 16px;
+    color: var(--muted);
+  }
+
+  .mobile-tab.is-active {
+    background: var(--accent-soft);
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .mobile-tab-label {
+    font-size: 0.86rem;
+  }
+
+  .page-stack,
+  .anime-list,
+  .timeline-list,
+  .search-results,
+  .library-row,
+  .log-entry-wrap,
+  .form-stack {
+    gap: 14px;
+  }
+
+  .hero-panel,
+  .detail-hero,
+  .split-hero,
+  .content-panel,
+  .auth-panel,
+  .auth-poster {
+    padding: 22px;
     border-radius: 22px;
   }
 
-  .anime-card {
+  .hero-panel {
+    gap: 20px;
+  }
+
+  .hero-copy h1,
+  .detail-copy h1,
+  .auth-poster h1 {
+    font-size: clamp(1.8rem, 8vw, 2.6rem);
+    line-height: 1.08;
+  }
+
+  .hero-note {
+    max-width: none;
+    margin-left: 0;
+  }
+
+  .toolbar,
+  .toolbar--search-page,
+  .filter-group,
+  .library-actions,
+  .editor-actions,
+  .search-explorer-actions,
+  .hero-actions,
+  .detail-facts,
+  .anime-card-footer,
+  .timeline-tags,
+  .pager {
+    gap: 10px;
+  }
+
+  .toolbar,
+  .toolbar--search-page,
+  .editor-actions,
+  .search-explorer-actions {
+    display: grid;
+  }
+
+  .filter-group {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .filter-chip {
+    flex: 0 0 auto;
+    min-height: var(--touch-size);
+  }
+
+  .search-field,
+  .search-field--wide,
+  .search-submit,
+  .header-cta,
+  .sidebar-logout,
+  .primary-button,
+  .ghost-button {
+    width: 100%;
+  }
+
+  .primary-button,
+  .ghost-button,
+  .nav-link,
+  .mobile-icon-button,
+  .user-chip,
+  .search-result {
+    min-height: var(--touch-size);
+  }
+
+  .anime-card,
+  .search-explorer-card,
+  .detail-hero,
+  .auth-page {
     grid-template-columns: 1fr;
   }
 
-  .search-explorer-card {
-    grid-template-columns: 1fr;
+  .anime-card {
+    gap: 14px;
   }
 
   .anime-poster-wrap {
     width: 100%;
+    max-width: 160px;
+  }
+
+  .anime-card-head,
+  .timeline-card-head,
+  .search-explorer-head {
+    display: grid;
+    gap: 10px;
+  }
+
+  .anime-card-link {
+    justify-self: start;
+  }
+
+  .timeline-item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .timeline-dot {
+    display: none;
+  }
+
+  .timeline-card {
+    padding: 18px;
+  }
+
+  .library-actions--compact {
+    padding-left: 0;
+  }
+
+  .pager {
+    display: grid;
+  }
+
+  .mobile-profile-actions {
+    display: block;
+  }
+
+  .profile-summary {
+    align-items: flex-start;
+  }
+
+  .auth-page {
+    gap: 16px;
+    padding: 0;
+  }
+
+  .auth-poster {
+    min-height: 240px;
+    justify-content: flex-end;
+  }
+
+  .poster-grid span,
+  .poster-orbs span,
+  .hero-orbit {
+    opacity: 0.42;
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --mobile-shell: min(100vw - 16px, 680px);
+  }
+
+  .mobile-topbar {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+  }
+
+  .mobile-tabbar {
+    width: calc(100vw - 8px);
+    gap: 4px;
+    padding-inline: 8px;
   }
 
   .content-panel,
@@ -1179,36 +1605,28 @@ img {
   .hero-panel,
   .detail-hero,
   .split-hero {
-    padding: 22px;
+    padding: 20px 18px;
   }
 
-  .sidebar-search,
-  .header-actions,
-  .user-chip,
-  .sidebar-account,
-  .search-submit,
-  .header-cta,
-  .sidebar-logout {
-    width: 100%;
+  .stats-grid,
+  .dashboard-band {
+    gap: 14px;
   }
 
-  .header-actions {
-    grid-template-columns: 1fr;
+  .hero-metric-card,
+  .insight-card,
+  .stat-card,
+  .hero-note {
+    padding: 16px;
   }
 
-  .user-chip {
-    justify-content: flex-start;
+  .search-explorer-card {
+    padding: 16px;
   }
 
-  .main-nav {
-    display: grid;
-    overflow: visible;
-    padding-bottom: 0;
-  }
-
-  .nav-link {
-    width: 100%;
-    min-width: 0;
-    justify-content: flex-start;
+  .detail-facts,
+  .anime-card-footer,
+  .timeline-tags {
+    font-size: 0.86rem;
   }
 }

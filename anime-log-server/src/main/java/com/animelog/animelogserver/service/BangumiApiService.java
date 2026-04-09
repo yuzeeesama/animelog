@@ -10,4 +10,6 @@ public interface BangumiApiService {
     AnimeVO getDetail(Long subjectId);
 
     List<AnimeVO> searchAndCache(String keyword);
+
+    List<AnimeVO> getTodayCalendar();
 }

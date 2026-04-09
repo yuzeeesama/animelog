@@ -26,13 +26,13 @@ const progress = computed(() => clampProgress(props.item.currentEpisode, props.i
 
     <div class="anime-card-body">
       <div class="anime-card-head">
-        <div>
+        <div class="anime-card-copy">
           <span class="status-pill" :data-tone="WATCH_STATUS_META[item.watchStatus].tone">
             {{ WATCH_STATUS_META[item.watchStatus].label }}
           </span>
           <h3>{{ item.animeName }}</h3>
         </div>
-        <RouterLink class="text-link" :to="`/anime/${item.animeId}`">查看详情</RouterLink>
+        <RouterLink class="anime-card-link text-link" :to="`/anime/${item.animeId}`">查看详情</RouterLink>
       </div>
 
       <p class="anime-meta">

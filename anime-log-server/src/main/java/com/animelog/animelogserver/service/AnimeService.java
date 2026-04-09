@@ -20,4 +20,6 @@ public interface AnimeService {
     AnimeVO getExternalDetail(String sourceProvider, Long sourceSubjectId);
 
     Long followExternal(Long userId, ExternalAnimeFollowDTO dto);
+
+    List<AnimeVO> getTodayCalendar();
 }

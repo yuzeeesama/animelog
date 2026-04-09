@@ -12,6 +12,9 @@ const searchStore = useAnimeSearchStore()
 searchStore.hydrate()
 
 const isAuthPage = computed(() => route.meta.layout === 'auth')
+const isDetailPage = computed(
+  () => route.name === 'anime-detail' || route.name === 'anime-external-detail',
+)
 const globalSearchKeyword = computed({
   get: () => searchStore.keyword,
   set: (value: string) => {
@@ -26,7 +29,29 @@ const navItems = [
   { label: '个人中心', to: '/profile' },
 ]
 
+const mobileTabs = [
+  { label: '工作台', shortLabel: '工作台', to: '/' },
+  { label: '搜索', shortLabel: '搜索', to: '/anime-search' },
+  { label: '追番', shortLabel: '追番', to: '/library' },
+  { label: '我的', shortLabel: '我的', to: '/profile' },
+]
+
+const routeTitles: Record<string, string> = {
+  dashboard: '工作台',
+  'anime-search': '搜索番剧',
+  library: '我的追番',
+  profile: '个人中心',
+  'anime-detail': '番剧详情',
+  'anime-external-detail': '番剧详情',
+  login: '登录',
+  register: '注册',
+}
+
 const userNickname = computed(() => authStore.userInfo?.nickname ?? '未登录')
+const mobileTitle = computed(() => {
+  const routeName = typeof route.name === 'string' ? route.name : ''
+  return routeTitles[routeName] ?? '追番日志馆'
+})
 
 async function handleLogout() {
   authStore.logout()
@@ -43,6 +68,15 @@ async function handleGlobalSearch() {
     await router.push('/anime-search')
   }
 }
+
+async function handleMobileBack() {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  await router.replace('/')
+}
 </script>
 
 <template>
@@ -54,6 +88,35 @@ async function handleGlobalSearch() {
     <a class="skip-link" href="#main-content">跳到主要内容</a>
     <div class="app-shell-glow app-shell-glow--left" aria-hidden="true" />
     <div class="app-shell-glow app-shell-glow--right" aria-hidden="true" />
+
+    <header class="mobile-topbar">
+      <button
+        v-if="isDetailPage"
+        class="mobile-icon-button"
+        type="button"
+        aria-label="返回上一页"
+        @click="handleMobileBack"
+      >
+        返回
+      </button>
+      <RouterLink v-else class="mobile-brand" to="/">
+        <span class="brand-mark">追</span>
+        <div class="mobile-brand-copy">
+          <strong>追番日志馆</strong>
+          <small>{{ mobileTitle }}</small>
+        </div>
+      </RouterLink>
+
+      <div v-if="isDetailPage" class="mobile-page-heading">
+        <span class="section-eyebrow">Detail</span>
+        <strong>{{ mobileTitle }}</strong>
+      </div>
+
+      <RouterLink class="mobile-user-link" to="/profile" aria-label="打开个人中心">
+        <span class="avatar-badge">{{ avatarFallback(authStore.userInfo?.nickname) }}</span>
+      </RouterLink>
+    </header>
+
     <aside class="app-sidebar" aria-label="应用导航">
       <div class="sidebar-surface">
         <RouterLink class="brand" to="/">
@@ -118,5 +181,17 @@ async function handleGlobalSearch() {
     <main id="main-content" class="page-shell" tabindex="-1">
       <RouterView />
     </main>
+
+    <nav class="mobile-tabbar" aria-label="底部导航">
+      <RouterLink
+        v-for="item in mobileTabs"
+        :key="item.to"
+        :to="item.to"
+        class="mobile-tab"
+        active-class="is-active"
+      >
+        <span class="mobile-tab-label">{{ item.shortLabel }}</span>
+      </RouterLink>
+    </nav>
   </div>
 </template>

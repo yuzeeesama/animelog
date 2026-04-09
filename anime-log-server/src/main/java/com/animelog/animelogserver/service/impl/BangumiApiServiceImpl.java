@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -42,6 +43,7 @@ public class BangumiApiServiceImpl implements BangumiApiService {
             .connectTimeout(Duration.ofSeconds(5))
             .build();
     private final Map<String, CacheEntry<List<AnimeVO>>> searchCache = new ConcurrentHashMap<>();
+    private volatile DailyCalendarCacheEntry todayCalendarCache;
 
     @Override
     public List<AnimeVO> search(String keyword) {
@@ -93,6 +95,37 @@ public class BangumiApiServiceImpl implements BangumiApiService {
         return cachedResults;
     }
 
+    @Override
+    public List<AnimeVO> getTodayCalendar() {
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
+        DailyCalendarCacheEntry cached = todayCalendarCache;
+        if (cached != null && cached.matches(today)) {
+            return copyList(cached.value());
+        }
+
+        JsonNode body = get("/calendar", bangumiApiProperties.getDetailTimeoutSeconds());
+        int weekdayId = today.getDayOfWeek().getValue();
+        List<AnimeVO> results = new ArrayList<>();
+
+        for (JsonNode item : readArray(body)) {
+            Integer currentWeekday = readInt(item.path("weekday"), "id");
+            if (currentWeekday == null || currentWeekday != weekdayId) {
+                continue;
+            }
+
+            for (JsonNode subject : readArray(item, "items")) {
+                if (readInt(subject, "type") != SUBJECT_TYPE_ANIME) {
+                    continue;
+                }
+                results.add(toAnimeVO(subject, true));
+            }
+            break;
+        }
+
+        todayCalendarCache = new DailyCalendarCacheEntry(copyList(results), today);
+        return results;
+    }
+
     private JsonNode post(String path, String payload, Long timeoutSeconds) {
         HttpRequest request = HttpRequest.newBuilder(buildUri(path))
                 .timeout(Duration.ofSeconds(timeoutSeconds))
@@ -137,12 +170,12 @@ public class BangumiApiServiceImpl implements BangumiApiService {
         AnimeVO vo = new AnimeVO();
         String originalName = readText(item, "name");
         String cnName = readText(item, "name_cn");
-        LocalDate airDate = parseDate(readText(item, "date"));
+        LocalDate airDate = parseDate(readText(item, "date", "air_date"));
 
         vo.setName(StringUtils.hasText(cnName) ? cnName : originalName);
         vo.setOriginalName(StringUtils.hasText(originalName) && !originalName.equals(cnName) ? originalName : null);
         vo.setCoverUrl(readText(item.path("images"), "large", "common", "medium", "small"));
-        vo.setTotalEpisodes(defaultIfNull(readInt(item, "eps"), 0));
+        vo.setTotalEpisodes(defaultIfNull(readInt(item, "eps", "eps_count"), 0));
         vo.setType("动画");
         vo.setSourceType("Bangumi API");
         vo.setSourceProvider("bangumi");
@@ -335,6 +368,12 @@ public class BangumiApiServiceImpl implements BangumiApiService {
     private record CacheEntry<T>(T value, Instant createdAt) {
         private boolean isExpired(Long cacheMinutes) {
             return cacheMinutes == null || cacheMinutes <= 0 || createdAt.plus(Duration.ofMinutes(cacheMinutes)).isBefore(Instant.now());
+        }
+    }
+
+    private record DailyCalendarCacheEntry(List<AnimeVO> value, LocalDate date) {
+        private boolean matches(LocalDate currentDate) {
+            return date != null && date.equals(currentDate);
         }
     }
 }

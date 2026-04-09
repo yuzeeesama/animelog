@@ -87,6 +87,16 @@ public class AnimeController {
     }
 
     /**
+     * 查询今日放送动画。
+     */
+    @Operation(summary = "查询今日放送")
+    @GetMapping("/calendar/today")
+    public Result<List<AnimeVO>> getTodayCalendar() {
+        log.info("查询今日放送");
+        return Result.success(animeService.getTodayCalendar());
+    }
+
+    /**
      * 追踪外部数据源中的番剧到本地库。
      */
     @Operation(summary = "外部番剧追番")

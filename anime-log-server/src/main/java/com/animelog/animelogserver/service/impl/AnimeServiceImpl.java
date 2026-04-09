@@ -114,6 +114,18 @@ public class AnimeServiceImpl implements AnimeService {
     }
 
     @Override
+    public List<AnimeVO> getTodayCalendar() {
+        try {
+            return bangumiApiService.getTodayCalendar().stream()
+                    .map(this::attachLocalLink)
+                    .toList();
+        } catch (Exception ex) {
+            log.warn("Bangumi 每日放送获取失败，返回空列表", ex);
+            return List.of();
+        }
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Long followExternal(Long userId, ExternalAnimeFollowDTO dto) {
         Anime localAnime = ensureLocalAnimeFromExternal(dto.getSourceProvider(), dto.getSourceSubjectId());

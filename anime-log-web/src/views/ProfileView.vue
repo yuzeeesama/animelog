@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { updateUserPassword, updateUserProfile } from '@/api/user'
 import SectionTitle from '@/components/SectionTitle.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -11,6 +12,7 @@ import {
 } from '@/utils/validation'
 
 const authStore = useAuthStore()
+const router = useRouter()
 
 const profileForm = reactive({
   nickname: '',
@@ -122,6 +124,11 @@ async function submitPassword() {
   }
 }
 
+async function handleLogout() {
+  authStore.logout()
+  await router.replace('/login')
+}
+
 onMounted(() => {
   void hydratePage()
 })
@@ -149,6 +156,12 @@ onMounted(() => {
           <p>@{{ authStore.userInfo?.username }}</p>
         </div>
       </div>
+    </section>
+
+    <section class="mobile-profile-actions">
+      <button class="ghost-button ghost-button--danger mobile-profile-logout" type="button" @click="handleLogout">
+        退出登录
+      </button>
     </section>
 
     <p v-if="message" class="form-message" :class="isError ? 'form-message--error' : 'form-message--success'">

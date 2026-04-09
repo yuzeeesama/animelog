@@ -1,22 +1,27 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { getTodayCalendarAnime } from '@/api/anime'
 import { getHighlightLogs, getTimeline } from '@/api/episodeLog'
 import { getUserAnimeList, getUserAnimeStatistics } from '@/api/userAnime'
 import AnimeCard from '@/components/AnimeCard.vue'
+import DailyBroadcastCard from '@/components/DailyBroadcastCard.vue'
 import LogTimelineItem from '@/components/LogTimelineItem.vue'
 import SectionTitle from '@/components/SectionTitle.vue'
 import { WATCH_STATUS_META } from '@/constants/anime'
 import { useAuthStore } from '@/stores/auth'
-import type { EpisodeLog, UserAnime, UserAnimeStatistics, WatchStatus } from '@/types/models'
+import type { Anime, EpisodeLog, UserAnime, UserAnimeStatistics, WatchStatus } from '@/types/models'
 
 const authStore = useAuthStore()
 const statistics = ref<UserAnimeStatistics | null>(null)
 const watchingList = ref<UserAnime[]>([])
 const timeline = ref<EpisodeLog[]>([])
 const highlights = ref<EpisodeLog[]>([])
+const todayCalendar = ref<Anime[]>([])
 const loading = ref(true)
+const calendarLoading = ref(true)
 const errorMessage = ref('')
+const calendarErrorMessage = ref('')
 
 const statCards = computed(() => {
   const data = statistics.value
@@ -79,25 +84,42 @@ const dashboardHighlights = computed(() => {
 
 async function load() {
   loading.value = true
+  calendarLoading.value = true
   errorMessage.value = ''
+  calendarErrorMessage.value = ''
 
-  try {
-    const [stats, library, logs, highlightPage] = await Promise.all([
-      getUserAnimeStatistics(),
-      getUserAnimeList({ watchStatus: 1, pageNum: 1, pageSize: 4 }),
-      getTimeline({ pageNum: 1, pageSize: 5 }),
-      getHighlightLogs({ pageNum: 1, pageSize: 3 }),
-    ])
+  const dashboardPromise = (async () => {
+    try {
+      const [stats, library, logs, highlightPage] = await Promise.all([
+        getUserAnimeStatistics(),
+        getUserAnimeList({ watchStatus: 1, pageNum: 1, pageSize: 4 }),
+        getTimeline({ pageNum: 1, pageSize: 5 }),
+        getHighlightLogs({ pageNum: 1, pageSize: 3 }),
+      ])
 
-    statistics.value = stats
-    watchingList.value = library.list
-    timeline.value = logs.list
-    highlights.value = highlightPage.list
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '加载工作台失败。'
-  } finally {
-    loading.value = false
-  }
+      statistics.value = stats
+      watchingList.value = library.list
+      timeline.value = logs.list
+      highlights.value = highlightPage.list
+    } catch (error) {
+      errorMessage.value = error instanceof Error ? error.message : '加载工作台失败。'
+    } finally {
+      loading.value = false
+    }
+  })()
+
+  const calendarPromise = (async () => {
+    try {
+      todayCalendar.value = await getTodayCalendarAnime()
+    } catch (error) {
+      todayCalendar.value = []
+      calendarErrorMessage.value = error instanceof Error ? error.message : '今日放送暂时加载失败。'
+    } finally {
+      calendarLoading.value = false
+    }
+  })()
+
+  await Promise.all([dashboardPromise, calendarPromise])
 }
 
 onMounted(() => {
@@ -165,6 +187,26 @@ onMounted(() => {
         <strong>{{ item.value }}</strong>
         <p>{{ item.description }}</p>
       </article>
+    </section>
+
+    <section class="content-panel">
+      <SectionTitle
+        eyebrow="Today On Air"
+        title="每日放送"
+        description="今天值得留意的在播动画，直接从工作台进入详情或加入你的追番节奏。"
+      />
+
+      <p v-if="calendarErrorMessage" class="form-message form-message--error">{{ calendarErrorMessage }}</p>
+
+      <div v-if="calendarLoading" class="broadcast-grid" aria-hidden="true">
+        <div v-for="index in 4" :key="index" class="skeleton-card skeleton-card--broadcast" />
+      </div>
+      <div v-else-if="!todayCalendar.length" class="empty-state">
+        今天还没有查到放送中的动画，稍后再来看看吧。
+      </div>
+      <div v-else class="broadcast-grid">
+        <DailyBroadcastCard v-for="item in todayCalendar" :key="`${item.sourceProvider}-${item.sourceSubjectId}`" :item="item" />
+      </div>
     </section>
 
     <section class="content-grid">

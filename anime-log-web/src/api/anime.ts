@@ -27,6 +27,10 @@ export function searchAnime(keyword: string) {
   return http.get<Anime[]>('/anime/search', { keyword })
 }
 
+export function getTodayCalendarAnime() {
+  return http.get<Anime[]>('/anime/calendar/today')
+}
+
 export function followExternalAnime(payload: ExternalAnimeFollowPayload) {
   return http.post<number>('/anime/follow-external', payload)
 }

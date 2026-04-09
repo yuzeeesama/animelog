@@ -9,7 +9,7 @@ defineProps<{
 
 <template>
   <article class="timeline-item">
-    <div class="timeline-dot" />
+    <div class="timeline-dot" aria-hidden="true" />
     <div class="timeline-card">
       <div class="timeline-card-head">
         <div>
