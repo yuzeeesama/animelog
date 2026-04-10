@@ -28,10 +28,34 @@ const statCards = computed(() => {
   if (!data) return []
 
   return [
-    { key: 'wantWatchCount', label: '想看', value: data.wantWatchCount, status: 0 as WatchStatus },
-    { key: 'watchingCount', label: '在看', value: data.watchingCount, status: 1 as WatchStatus },
-    { key: 'watchedCount', label: '看完', value: data.watchedCount, status: 2 as WatchStatus },
-    { key: 'totalEpisodesWatched', label: '已记录集数', value: data.totalEpisodesWatched, status: 1 as WatchStatus },
+    {
+      key: 'wantWatchCount',
+      label: '想看',
+      value: data.wantWatchCount,
+      status: 0 as WatchStatus,
+      to: { path: '/library', query: { watchStatus: '0' } },
+    },
+    {
+      key: 'watchingCount',
+      label: '在看',
+      value: data.watchingCount,
+      status: 1 as WatchStatus,
+      to: { path: '/library', query: { watchStatus: '1' } },
+    },
+    {
+      key: 'watchedCount',
+      label: '看完',
+      value: data.watchedCount,
+      status: 2 as WatchStatus,
+      to: { path: '/library', query: { watchStatus: '2' } },
+    },
+    {
+      key: 'totalEpisodesWatched',
+      label: '已记录集数',
+      value: data.totalEpisodesWatched,
+      status: 1 as WatchStatus,
+      to: { path: '/logs' },
+    },
   ]
 })
 
@@ -172,13 +196,13 @@ onMounted(() => {
     <p v-if="errorMessage" class="form-message form-message--error">{{ errorMessage }}</p>
 
     <section class="stats-grid">
-      <article v-for="card in statCards" :key="card.key" class="stat-card">
+      <RouterLink v-for="card in statCards" :key="card.key" :to="card.to" class="stat-card stat-card--link">
         <span class="status-pill" :data-tone="WATCH_STATUS_META[card.status].tone">
           {{ card.label }}
         </span>
         <strong>{{ card.value }}</strong>
         <p>当前账号下已沉淀的追番记录</p>
-      </article>
+      </RouterLink>
     </section>
 
     <section class="dashboard-band">

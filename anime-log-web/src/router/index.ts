@@ -3,6 +3,7 @@ import AppShell from '@/components/AppShell.vue'
 import AnimeDetailView from '@/views/AnimeDetailView.vue'
 import AnimeSearchView from '@/views/AnimeSearchView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import EpisodeLogsView from '@/views/EpisodeLogsView.vue'
 import LibraryView from '@/views/LibraryView.vue'
 import LoginView from '@/views/LoginView.vue'
 import ProfileView from '@/views/ProfileView.vue'
@@ -37,6 +38,12 @@ const router = createRouter({
           path: 'anime-search',
           name: 'anime-search',
           component: AnimeSearchView,
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'logs',
+          name: 'episode-logs',
+          component: EpisodeLogsView,
           meta: { requiresAuth: true },
         },
         {

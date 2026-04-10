@@ -1,14 +1,32 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { deleteUserAnime, getUserAnimeList, updateUserAnimeProgress } from '@/api/userAnime'
 import AnimeCard from '@/components/AnimeCard.vue'
 import SectionTitle from '@/components/SectionTitle.vue'
 import { WATCH_STATUS_OPTIONS } from '@/constants/anime'
 import type { UserAnime, WatchStatus } from '@/types/models'
 
+const route = useRoute()
+const router = useRouter()
+
+function parseWatchStatusQuery(value: unknown): WatchStatus | undefined {
+  const normalized = Array.isArray(value) ? value[0] : value
+
+  if (normalized === undefined || normalized === null || normalized === '') {
+    return undefined
+  }
+
+  const parsed = Number(normalized)
+  if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 4) {
+    return parsed as WatchStatus
+  }
+
+  return undefined
+}
+
 const filters = reactive({
-  watchStatus: undefined as WatchStatus | undefined,
+  watchStatus: parseWatchStatusQuery(route.query.watchStatus),
   keyword: '',
   pageNum: 1,
   pageSize: 6,
@@ -88,6 +106,32 @@ watch(
   () => [filters.watchStatus, filters.keyword, filters.pageNum],
   () => {
     void loadLibrary()
+  },
+)
+
+watch(
+  () => route.query.watchStatus,
+  (watchStatus) => {
+    const nextStatus = parseWatchStatusQuery(watchStatus)
+    if (filters.watchStatus !== nextStatus) {
+      filters.watchStatus = nextStatus
+      filters.pageNum = 1
+    }
+  },
+)
+
+watch(
+  () => filters.watchStatus,
+  (watchStatus) => {
+    const currentStatus = parseWatchStatusQuery(route.query.watchStatus)
+    if (currentStatus === watchStatus) return
+
+    void router.replace({
+      query: {
+        ...route.query,
+        watchStatus: watchStatus === undefined ? undefined : String(watchStatus),
+      },
+    })
   },
 )
 
